@@ -1,0 +1,35 @@
+node_modules/
+dist/
+**/dist/
+networking/gen
+
+# secrets
+.env
+**/.env
+.env.*
+.publish.env
+
+# databases
+*.db
+*.sqlite
+*.sqlite3
+rootsdk.sqlite3*
+
+# release output
+release/
+*.pkg
+
+# logs / caches
+*.log
+.vite/
+coverage/
+
+# generated store screenshot build (slide-*.png and raw/ are kept)
+screenshots/store/build/
+
+# typescript incremental cache (dist is ignored, so a stale one skips the build)
+*.tsbuildinfo
+
+# made at build time from secrets (scripts/config.js)
+server/src/config.ts
+.wordy.env

@@ -1,0 +1,74 @@
+# Builds, tests and uploads wordy to Root. Uploading from the cloud sandbox
+# doesn't work (its proxy can't carry Root's gRPC), so it runs here instead.
+# Start it by pushing to the "upload" branch (git push origin HEAD:upload),
+# pushing a tag like v1.1.0, or from the Actions tab.
+# Needs repo secrets: ROOT_AUTH_TOKEN (the publish token from dev.rootapp.com),
+# WORDY_SEED (any long random text; keeps the daily order secret, never change it
+# after launch or the words reshuffle), SUPABASE_URL and SUPABASE_KEY (the shared
+# puzzle-apps project's URL and service role key).
+# Uploading doesn't release: ilo still presses Release in the developer portal.
+name: upload to root
+
+on:
+  push:
+    branches: [upload]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: upload
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      # each step's output also goes to a log, so a failure shows up as an annotation
+      - name: Install
+        run: set -o pipefail; npm ci --no-audit --no-fund 2>&1 | tee -a "$RUNNER_TEMP/out.log"
+      # tests rebuild config.ts without the secrets, so they run before the real build
+      - name: Test
+        run: set -o pipefail; (npm run build -w networking && npm test) 2>&1 | tee -a "$RUNNER_TEMP/out.log"
+      - name: Build
+        env:
+          WORDY_SEED: ${{ secrets.WORDY_SEED }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: set -o pipefail; npm run build 2>&1 | tee -a "$RUNNER_TEMP/out.log"
+      - name: Check the secrets made it in
+        run: |
+          set -o pipefail
+          node -e "const c=require('./server/dist/config.js'); const miss=['WORDY_SEED','SUPABASE_URL','SUPABASE_KEY'].filter(k=>!c[k]); if(miss.length){console.error('add these repo secrets first: '+miss.join(', '));process.exit(1)} if(c.WORDY_SEED.length<16){console.error('WORDY_SEED should be at least 16 characters');process.exit(1)} console.log('global boards on')" 2>&1 | tee -a "$RUNNER_TEMP/out.log"
+      - name: Stage the release
+        run: set -o pipefail; node scripts/stage-release.js 2>&1 | tee -a "$RUNNER_TEMP/out.log"
+      - name: Build the package
+        run: |
+          set -o pipefail
+          v=$(node -p "require('./root-manifest.json').version.replace(/\./g, '-')")
+          echo "PKG=$PWD/release/wordy-$v.pkg" >> "$GITHUB_ENV"
+          npx rootsdk build package --project-folder release/stage --output-file "$PWD/release/wordy-$v.pkg" 2>&1 | tee -a "$RUNNER_TEMP/out.log"
+      - name: Upload to Root
+        env:
+          ROOT_AUTH_TOKEN: ${{ secrets.ROOT_AUTH_TOKEN }}
+        run: |
+          set -o pipefail
+          if [ -z "$ROOT_AUTH_TOKEN" ]; then echo "add the ROOT_AUTH_TOKEN repo secret first" | tee -a "$RUNNER_TEMP/out.log"; exit 1; fi
+          # forgive a pasted "ROOT_AUTH_TOKEN=..." line, quotes or stray spaces
+          tok=$(printf '%s' "$ROOT_AUTH_TOKEN" | tr -d '\r\n' | sed -e 's/^[[:space:]]*\(ROOT_AUTH_TOKEN\)\{0,1\}[[:space:]]*=[[:space:]]*//' -e 's/^["'"'"']//' -e 's/["'"'"'][[:space:]]*$//' -e 's/[[:space:]]*$//')
+          echo "::add-mask::$tok"
+          echo "token length ${#tok}, was ${#ROOT_AUTH_TOKEN}" | tee -a "$RUNNER_TEMP/out.log"
+          npx rootsdk upload package --file "$PKG" --authToken "$tok" --host dev.rootapp.com 2>&1 | tee -a "$RUNNER_TEMP/out.log"
+      - name: Show what failed
+        if: failure()
+        run: |
+          touch "$RUNNER_TEMP/out.log"
+          msg=$(tail -n 40 "$RUNNER_TEMP/out.log" | sed -e 's/%/%25/g' -e 's/\r//g' | awk 'BEGIN{ORS="%0A"} {print}')
+          echo "::error title=upload failed::$msg"
