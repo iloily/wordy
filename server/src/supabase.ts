@@ -17,7 +17,9 @@ export class SupabaseBackend implements Backend {
           method: init.method ?? "POST",
           headers: {
             apikey: this.key,
-            Authorization: `Bearer ${this.key}`,
+            // a legacy service_role key is a JWT and also goes in Authorization;
+            // a new sb_secret_ key only goes in apikey (the gateway rejects it as a Bearer token)
+            ...(this.key.startsWith("eyJ") ? { Authorization: `Bearer ${this.key}` } : {}),
             "Content-Type": "application/json",
             ...(init.prefer ? { Prefer: init.prefer } : {}),
           },
