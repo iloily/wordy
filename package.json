@@ -1,0 +1,38 @@
+{
+  "name": "@wordy/app",
+  "description": "wordy",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@rootsdk/client-app": "*",
+    "@rootsdk/server-app": "*",
+    "@wordy/gen-client": "file:./networking/gen/client",
+    "@wordy/gen-server": "file:./networking/gen/server",
+    "@wordy/gen-shared": "file:./networking/gen/shared"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.2.17",
+    "@rootsdk/dev-tools": "*",
+    "@types/node": "^22.10.2",
+    "typescript": "^5.8.2",
+    "wordlist-english": "1.2.1"
+  },
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "clean": "node clean.js",
+    "words": "node scripts/make-words.js",
+    "test": "npm test -w server",
+    "client": "npm run client -w client",
+    "server": "npm run server -w server"
+  },
+  "workspaces": {
+    "packages": [
+      "./networking",
+      "./server",
+      "./client"
+    ]
+  }
+}

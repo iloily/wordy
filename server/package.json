@@ -1,0 +1,10 @@
+{
+  "name": "@wordy/server",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "node ../scripts/config.js && tsc",
+    "server": "rootsdk start devhost --project-folder=../",
+    "test": "node ../scripts/config.js && tsc && node test/run.js && node test/sql.mjs"
+  }
+}

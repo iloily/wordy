@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+import "rootsdk/types.proto";
+
+// Every action goes through Act with a JSON payload, so a new action doesn't
+// mean regenerating the networking package.
+message ActRequest {
+  string action = 1;
+  string payload = 2;
+}
+
+message ActResponse {
+  bool ok = 1;
+  string error = 2;
+  string payload = 3;
+}
+
+// topic + JSON payload (kept for later; v1 only answers Act calls)
+message StateEvent {
+  string topic = 1;
+  string payload = 2;
+}
+
+service WordyService {
+  rpc Act(ActRequest) returns (ActResponse);
+
+  rpc BroadcastState(StateEvent) returns (rootsdk.Void);
+}
