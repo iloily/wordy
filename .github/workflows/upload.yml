@@ -46,7 +46,7 @@ jobs:
       - name: Check the secrets made it in
         run: |
           set -o pipefail
-          node -e "const c=require('./server/dist/config.js'); const miss=['WORDY_SEED','SUPABASE_URL','SUPABASE_KEY'].filter(k=>!c[k]); if(miss.length){console.error('add these repo secrets first: '+miss.join(', '));process.exit(1)} if(c.WORDY_SEED.length<16){console.error('WORDY_SEED should be at least 16 characters');process.exit(1)} console.log('global boards on')" 2>&1 | tee -a "$RUNNER_TEMP/out.log"
+          node -e "const c=require('./server/dist/config.js'); const miss=['WORDY_SEED','SUPABASE_URL','SUPABASE_KEY'].filter(k=>!c[k]); if(miss.length){console.error('add these repo secrets first: '+miss.join(', '));process.exit(1)} if(c.SUPABASE_KEY.startsWith('sb_publishable_')||/\"role\":\"anon\"/.test(Buffer.from((c.SUPABASE_KEY.split('.')[1]||''),'base64').toString())){console.error('SUPABASE_KEY is the publishable (anon) key; use the secret key from Supabase > Project Settings > API Keys');process.exit(1)} if(c.WORDY_SEED.length<16){console.error('WORDY_SEED should be at least 16 characters');process.exit(1)} console.log('global boards on')" 2>&1 | tee -a "$RUNNER_TEMP/out.log"
       - name: Stage the release
         run: set -o pipefail; node scripts/stage-release.js 2>&1 | tee -a "$RUNNER_TEMP/out.log"
       - name: Build the package

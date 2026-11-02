@@ -4,6 +4,10 @@
 
 **Privacy policy URL:** https://ilystudios.net/wordy/privacy/
 
+**Support server ID:** 0031b5ab-99f2-8302-8296-ae9a26696c42
+
+**Contact email:** info@ilystudios.net
+
 ## Short description
 
 A new 5-letter word every day for all of Root, unlimited freeplay, and one leaderboard across every server.
